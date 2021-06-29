@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -14,11 +16,21 @@ using Akka.Persistence.Sql.Linq2Db.Journal.Types;
 using Akka.Persistence.Sql.Linq2Db.Utility;
 using Akka.Streams;
 using Akka.Streams.Dsl;
-using Akka.Util;
 using Akka.Util.Internal;
+using LanguageExt;
 
 namespace Akka.Persistence.Sql.Linq2Db.Journal
 {
+    internal struct NoThrowAwaiter : ICriticalNotifyCompletion
+    {
+        private readonly Task _task;
+        public NoThrowAwaiter(Task task) { _task = task; }
+        public NoThrowAwaiter GetAwaiter() => this;
+        public bool IsCompleted => _task.IsCompleted;
+        public void GetResult() { }
+        public void OnCompleted(Action continuation) => _task.GetAwaiter().OnCompleted(continuation);
+        public void UnsafeOnCompleted(Action continuation) => OnCompleted(continuation);
+    }
     public class DateTimeHelpers
     {
         private static DateTime UnixEpoch = new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc);
@@ -102,14 +114,18 @@ namespace Akka.Persistence.Sql.Linq2Db.Journal
         {
             if (message is WriteFinished wf)
             {
-                writeInProgress.Remove(wf.PersistenceId);
+                
+                if (writeInProgress.TryGetValue(wf.PersistenceId,
+                    out Task latestPending) & latestPending == wf.Future)
+                {
+                    writeInProgress.Remove(wf.PersistenceId);
+                }
+                return true;
             }
             else
             {
                 return false;
             }
-
-            return true;
         }
 
         public override void AroundPreRestart(Exception cause, object message)
@@ -125,7 +141,7 @@ namespace Akka.Persistence.Sql.Linq2Db.Journal
         {
             await _journal.MessagesWithBatch(persistenceId, fromSequenceNr,
                     toSequenceNr, _journalConfig.DaoConfig.ReplayBatchSize,
-                    Option<(TimeSpan, IScheduler)>.None)
+                    Util.Option<(TimeSpan, IScheduler)>.None)
                 .Take(max).SelectAsync(1,
                     t => t.IsSuccess
                         ? Task.FromResult(t.Success.Value)
@@ -142,18 +158,18 @@ namespace Akka.Persistence.Sql.Linq2Db.Journal
         {
             if (writeInProgress.ContainsKey(persistenceId))
             {
-                try
-                {
-                    await writeInProgress[persistenceId];
-                }
-                catch (Exception)
-                {
-                    //We don't have 'Recover' in C# so this is intentionally empty
-                    //Basically we just wanted to wait for write to succeed OR fail
-                }
-                var hsn =await _journal.HighestSequenceNr(persistenceId,
-                    fromSequenceNr);
-                return hsn;
+                await new NoThrowAwaiter(writeInProgress[persistenceId]);
+                //try
+                //{
+                //    await writeInProgress[persistenceId];
+                //}
+                //catch (Exception)
+                //{
+                //    //We don't have 'Recover' in C# so this is intentionally empty
+                //    //Basically we just wanted to wait for write to succeed OR fail
+                //}
+                //return await _journal.HighestSequenceNr(persistenceId,
+                //    fromSequenceNr);
             }
             return await _journal.HighestSequenceNr(persistenceId, fromSequenceNr);
         }
