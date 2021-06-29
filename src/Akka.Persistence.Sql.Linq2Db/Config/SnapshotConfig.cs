@@ -29,7 +29,10 @@ namespace Akka.Persistence.Sql.Linq2Db.Config
             IDaoConfig =
                 new SnapshotDaoConfig(config.GetBoolean("compatibility-mode",
                     false));
+            UseOracle11 = config.GetBoolean("oracle-version-11", false);
         }
+
+        public bool UseOracle11 { get; set; }
 
         public string ProviderName { get; }
         public string ConnectionString { get; }

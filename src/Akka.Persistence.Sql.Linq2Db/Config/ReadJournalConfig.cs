@@ -21,7 +21,10 @@ namespace Akka.Persistence.Sql.Linq2Db.Config
             AddShutdownHook = config.GetBoolean("add-shutdown-hook", true);
             IncludeDeleted =
                 config.GetBoolean("include-logically-deleted", true);
+            UseOracle11 = config.GetBoolean("oracle-version-11", false);
         }
+
+        public bool UseOracle11 { get; set; }
 
         public BaseByteArrayJournalDaoConfig DaoConfig { get; set; }
 

@@ -11,6 +11,7 @@ using LinqToDB;
 using LinqToDB.Configuration;
 using LinqToDB.Data;
 using LinqToDB.Data.RetryPolicy;
+using LinqToDB.DataProvider.Oracle;
 using LinqToDB.DataProvider.SqlServer;
 using LinqToDB.Mapping;
 
@@ -38,7 +39,12 @@ namespace Akka.Persistence.Sql.Linq2Db.Db
 
             useCloneDataConnection = config.UseCloneConnection;
             mappingSchema = fmb.MappingSchema;
-            opts = new LinqToDbConnectionOptionsBuilder()
+            opts = ((config.ProviderName.ToLower().Contains("oracle") &&
+                     config.UseOracle11)
+                    ? new LinqToDbConnectionOptionsBuilder()
+                        .UseDataProvider(
+                            new OracleDataProvider($"apl2db-j-{configName}", OracleVersion.v11))
+                    : new LinqToDbConnectionOptionsBuilder())
                 .UseConnectionString(providerName, connString)
                 .UseMappingSchema(mappingSchema).Build();
             
@@ -65,7 +71,12 @@ namespace Akka.Persistence.Sql.Linq2Db.Db
 
             useCloneDataConnection = config.UseCloneConnection;
             mappingSchema = fmb.MappingSchema;
-            opts = new LinqToDbConnectionOptionsBuilder()
+            opts = opts = ((config.ProviderName.ToLower().Contains("oracle") &&
+                            config.UseOracle11)
+                    ? new LinqToDbConnectionOptionsBuilder()
+                        .UseDataProvider(
+                            new OracleDataProvider($"apl2db-ss-{configName}", OracleVersion.v11))
+                    : new LinqToDbConnectionOptionsBuilder())
                 .UseConnectionString(providerName, connString)
                 .UseMappingSchema(mappingSchema).Build();
             
@@ -103,6 +114,11 @@ namespace Akka.Persistence.Sql.Linq2Db.Db
                 builder.Member(r => r.Created)
                     .HasDataType(DataType.Int64)
                     .HasConversion(r => r.Ticks, r => new DateTime(r));
+            }
+            else if (config.ProviderName.ToLower().Contains("oracle"))
+            {
+                builder.Member(r => r.Created)
+                    .HasDataType(DataType.Timestamp).HasDbType("Timestamp(7)");
             }
             if (config.IDaoConfig.SqlCommonCompatibilityMode)
             {

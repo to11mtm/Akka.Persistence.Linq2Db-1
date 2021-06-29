@@ -21,7 +21,8 @@ namespace Akka.Persistence.Sql.Linq2Db.Config
             UseSharedDb = string.IsNullOrWhiteSpace(dbConf) ? null : dbConf;
             UseCloneConnection =
                 config.GetBoolean("use-clone-connection", false);
-            
+            UseOracle11 = config.GetBoolean("oracle-version-11", false);
+
         }
         
         public string MaterializerDispatcher { get; protected set; }
@@ -41,6 +42,7 @@ namespace Akka.Persistence.Sql.Linq2Db.Config
         }
 
         public string DefaultSerializer { get; set; }
+        public bool UseOracle11 { get; set; }
         public string ProviderName { get; }
         public string ConnectionString { get; }
         public bool UseCloneConnection { get; set; }
@@ -54,6 +56,7 @@ namespace Akka.Persistence.Sql.Linq2Db.Config
         IDaoConfig IDaoConfig { get; }
         bool UseCloneConnection { get; }
         string DefaultSerializer { get; }
+        public bool UseOracle11 { get; }
     }
 
     public interface IDaoConfig
