@@ -42,12 +42,9 @@ namespace Akka.Persistence.Sql.Linq2Db.Db
             opts = ((config.ProviderName.ToLower().Contains("oracle") &&
                      config.UseOracle11)
                     ? new LinqToDbConnectionOptionsBuilder()
-                        .UseDataProvider(
-                            new OracleDataProvider($"apl2db-j-{configName}", OracleVersion.v11))
-                    : new LinqToDbConnectionOptionsBuilder())
-                .UseConnectionString(providerName, connString)
+                        .UseOracle(connString, OracleVersion.v11)
+                    : new LinqToDbConnectionOptionsBuilder().UseConnectionString(providerName, connString))
                 .UseMappingSchema(mappingSchema).Build();
-            
             if (providerName.ToLower().StartsWith("sqlserver"))
             {
                 policy = new SqlServerRetryPolicy();
@@ -73,11 +70,10 @@ namespace Akka.Persistence.Sql.Linq2Db.Db
             mappingSchema = fmb.MappingSchema;
             opts = opts = ((config.ProviderName.ToLower().Contains("oracle") &&
                             config.UseOracle11)
-                    ? new LinqToDbConnectionOptionsBuilder()
-                        .UseDataProvider(
-                            new OracleDataProvider($"apl2db-ss-{configName}", OracleVersion.v11))
-                    : new LinqToDbConnectionOptionsBuilder())
-                .UseConnectionString(providerName, connString)
+                    ? new LinqToDbConnectionOptionsBuilder().UseOracle(
+                        connString, OracleVersion.v11)
+                    : new LinqToDbConnectionOptionsBuilder()
+                        .UseConnectionString(providerName, connString))
                 .UseMappingSchema(mappingSchema).Build();
             
             if (providerName.ToLower().StartsWith("sqlserver"))
