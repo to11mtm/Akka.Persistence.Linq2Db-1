@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(NetCoreTestVersion)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- FluentMigrator packages for DDL generation - sugoi desu ne! ✨ -->
+    <PackageReference Include="FluentMigrator" />
+    <PackageReference Include="FluentMigrator.Runner" />
+    <PackageReference Include="FluentMigrator.Runner.MySql" />
+    <PackageReference Include="FluentMigrator.Runner.Postgres" />
+    <PackageReference Include="FluentMigrator.Runner.SQLite" />
+    <PackageReference Include="FluentMigrator.Runner.SqlServer" />
+    
+    <!-- CLI support -->
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+</Project>
+

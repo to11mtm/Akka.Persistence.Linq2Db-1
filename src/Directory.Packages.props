@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AkkaVersion>1.5.55</AkkaVersion>
     <AkkaHostingVersion>1.5.55.1</AkkaHostingVersion>
-    <FluentMigratorVersion>5.2.0</FluentMigratorVersion>
+    <FluentMigratorVersion>8.0.0</FluentMigratorVersion>
     <SqliteVersion>1.0.118</SqliteVersion>
     <MicrosoftSqliteVersion>8.0.7</MicrosoftSqliteVersion>
     <MicrosoftExtensionsVersion>[6.0.0, )</MicrosoftExtensionsVersion>
@@ -35,6 +35,10 @@
     <PackageVersion Include="linq2db" Version="5.4.1" />
     <PackageVersion Include="FluentMigrator" Version="$(FluentMigratorVersion)" />
     <PackageVersion Include="FluentMigrator.Runner" Version="$(FluentMigratorVersion)" />
+    <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="$(FluentMigratorVersion)" />
+    <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="$(FluentMigratorVersion)" />
+    <PackageVersion Include="FluentMigrator.Runner.MySql" Version="$(FluentMigratorVersion)" />
+    <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="$(FluentMigratorVersion)" />
   </ItemGroup>
   <!-- SQL Server dependencies -->
   <ItemGroup>
