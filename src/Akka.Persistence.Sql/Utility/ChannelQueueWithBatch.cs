@@ -191,6 +191,7 @@ namespace Akka.Persistence.Sql.Utility
                 }
 
                 item = batch;
+
                 return true;
             }
         }

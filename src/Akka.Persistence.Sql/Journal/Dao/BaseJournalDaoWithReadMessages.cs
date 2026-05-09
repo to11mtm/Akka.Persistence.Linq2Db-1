@@ -72,13 +72,17 @@ namespace Akka.Persistence.Sql.Journal.Dao
                             int i,
                             long fromSeqNo)
                             => await (await Messages(s, fromSeqNo, l, i))
-                                .RunWith(ExtSeq.Seq<Try<ReplayCompletion>>(), Materializer);
+                                //.RunWith(ExtSeq.Seq<Try<ReplayCompletion>>(), Materializer);
+                                .RunWith(ExtSeq.SeqViaList<Try<ReplayCompletion>>(i), Materializer);
 
                         async Task<Option<((long, FlowControlEnum), LanguageExt.Seq<Try<ReplayCompletion>>)>>
                             RetrieveNextBatch(long fromSeq)
                         {
-                            var msg = await BatchFromDb(persistenceId, toSequenceNr, batchSize, fromSeq);
-
+                            var msg = await BatchFromDb(persistenceId, toSequenceNr, batchSize, fromSeq)
+#if FALSE
+                                    .ConfigureAwait(ConfigureAwaitOptions.ForceYielding)
+#endif
+                                ;
                             var hasMoreEvents = msg.Count == batchSize;
 
                             var lastSeq = Option<long>.None;

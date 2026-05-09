@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -48,11 +49,12 @@ namespace Akka.Persistence.Sql.Journal
         private readonly CancellationTokenSource _pendingWriteCts;
         private readonly bool _useWriterUuid;
 
-        private readonly Dictionary<string, Task> _writeInProgress = new();
+        private readonly ConcurrentDictionary<string, Task> _writeInProgress = new();
 
         private ByteArrayJournalDao? _journal;
 
         private ActorMaterializer? _mat;
+        private IActorRef _self;
 
         public SqlWriteJournal(Configuration.Config journalConfig)
         {
@@ -104,6 +106,7 @@ namespace Akka.Persistence.Sql.Journal
         {
             try
             {
+                _self = Self;
                 _mat = Materializer.CreateSystemMaterializer(
                     context: (ExtendedActorSystem)Context.System,
                     settings: ActorMaterializerSettings
@@ -161,7 +164,7 @@ namespace Akka.Persistence.Sql.Journal
             {
                 case WriteFinished wf:
                     if (_writeInProgress.TryGetValue(wf.PersistenceId, out var latestPending) & (latestPending == wf.Future))
-                        _writeInProgress.Remove(wf.PersistenceId);
+                        _writeInProgress.TryRemove(wf.PersistenceId, out _);
                     return true;
 
                 // `IsInitialized` and `Initialized` are used mostly for testing purposes,
@@ -227,7 +230,7 @@ namespace Akka.Persistence.Sql.Journal
             var future = _journal!.AsyncWriteMessages(messagesList, cancellationToken, currentTime);
 
             _writeInProgress[persistenceId] = future;
-            var self = Self;
+            var self = _self;
 
             // When we are done, we want to send a 'WriteFinished' so that
             // Sequence Number reads won't block/await/etc.

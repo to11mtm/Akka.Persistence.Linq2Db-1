@@ -381,8 +381,20 @@ namespace Akka.Persistence.Sql.Journal.Dao
             }
         }
 
+        // New method to avoid cost of new ImmutableArray every time we want to link tokens for a batch write.
+        private static CancellationTokenSource CreateCancellationTokenSource(
+            ImmutableList<CancellationToken> cancellationTokens,
+            CancellationToken otherToken)
+        {
+            var outArr = new CancellationToken[cancellationTokens.Count + 1];
+            cancellationTokens.CopyTo(outArr, 0);
+            outArr[cancellationTokens.Count] = otherToken;
+            return CancellationTokenSource.CreateLinkedTokenSource(outArr);
+        }
+
         private async Task InsertMultiple(Seq<JournalRow> xs, ImmutableList<CancellationToken> cancellationTokens)
         {
+            // using var cts = CreateCancellationTokenSource(cancellationTokens, ShutdownToken);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokens.Add(ShutdownToken).ToArray());
             await ConnectionFactory.ExecuteWithTransactionAsync(
                 WriteIsolationLevel,
@@ -528,7 +540,7 @@ namespace Akka.Persistence.Sql.Journal.Dao
             var inserted = await (this.JournalConfig.TableConfig.EventJournalTable.UseWriterUuidColumn
                 ? query.InsertWithOutputListAsync(    
                         connection.GetTable<JournalRow>(),
-                        (input) =>
+                        static (input) =>
                             new JournalRow()
                             {
                                 PersistenceId = input.PersistenceId,
@@ -540,12 +552,12 @@ namespace Akka.Persistence.Sql.Journal.Dao
                                 Identifier = input.Identifier,
                                 WriterUuid = input.WriterUuid,
                             },
-                        (inserted) => new { inserted.Ordering, inserted.PersistenceId, inserted.SequenceNumber },
+                        static (inserted) => new { inserted.Ordering, inserted.PersistenceId, inserted.SequenceNumber },
                         token)
                 : 
                 query.InsertWithOutputListAsync(
                         connection.GetTable<JournalRow>(),
-                        (input) =>
+                        static (input) =>
                             new JournalRow()
                             {
                                 PersistenceId = input.PersistenceId,
@@ -556,7 +568,7 @@ namespace Akka.Persistence.Sql.Journal.Dao
                                 Timestamp = input.Timestamp,
                                 Identifier = input.Identifier,
                             },
-                        (inserted) => new { inserted.Ordering, inserted.PersistenceId, inserted.SequenceNumber }, token)
+                        static (inserted) => new { inserted.Ordering, inserted.PersistenceId, inserted.SequenceNumber }, token)
                 );
             var insertList = new List<JournalTagRow>(thisInsTagSize);
             foreach (var ir in inserted)
