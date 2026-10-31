@@ -119,7 +119,28 @@ public abstract class TagTableFastInsertSpecBase : Akka.TestKit.Xunit.TestKit
     [Theory]
     [InlineData(TagTableQueryableInsertMode.Parameterized)]
     [InlineData(TagTableQueryableInsertMode.Inline)]
-    public async Task Write_with_a_single_tagged_event_still_uses_the_fast_path(TagTableQueryableInsertMode mode)
+    public async Task Single_tagged_event_uses_the_row_insert_path_instead_of_the_fast_path(TagTableQueryableInsertMode mode)
+    {
+        await using var fixture = await Fixture.Create(this, mode, writerUuid: true);
+
+        var result = await fixture.WriteAtomic(
+                "pid", 7, 1, tagSelector: static _ => new[] { "all", "only" })
+            .WaitAsync(Deadline);
+
+        Assert.Null(result);
+        Assert.Equal(0, fixture.Counter.JournalInserts);
+        await using var connection = fixture.Factory.GetConnection();
+        var row = await connection.GetTable<JournalRow>().SingleAsync();
+        var tags = await connection.GetTable<JournalTagRow>().ToListAsync();
+        Assert.Equal(7, row.SequenceNumber);
+        Assert.Equal(new[] { "all", "only" }, tags.Select(t => t.TagValue).OrderBy(t => t));
+        Assert.All(tags, t => Assert.Equal(row.Ordering, t.OrderingId));
+    }
+
+    [Theory]
+    [InlineData(TagTableQueryableInsertMode.Parameterized)]
+    [InlineData(TagTableQueryableInsertMode.Inline)]
+    public async Task Batch_with_one_tagged_event_among_untagged_ones_still_uses_the_fast_path(TagTableQueryableInsertMode mode)
     {
         await using var fixture = await Fixture.Create(this, mode, writerUuid: true);
 
