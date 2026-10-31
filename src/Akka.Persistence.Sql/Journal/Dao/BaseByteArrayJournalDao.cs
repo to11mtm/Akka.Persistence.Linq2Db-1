@@ -370,7 +370,13 @@ namespace Akka.Persistence.Sql.Journal.Dao
                         {
                             case TagTableQueryableInsertMode.Parameterized:
                             case TagTableQueryableInsertMode.Inline:
-                                await RunFastInsertEventParams(connection, xs, token);
+                                // The fast path exists to correlate tag rows with generated orderings.
+                                // Without any tags a plain BulkCopy is cheaper: no query building and
+                                // no OUTPUT/RETURNING results to read back.
+                                if (xs.Exists(static r => r.TagArray.Length > 0))
+                                    await RunFastInsertEventParams(connection, xs, token);
+                                else
+                                    await BulkInsertNoTagTableTags(connection, xs, JournalConfig.DaoConfig, token);
                                 break;
 
                             default: // Off
